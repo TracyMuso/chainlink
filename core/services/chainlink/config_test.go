@@ -12,6 +12,7 @@ import (
 	"github.com/kylelemons/godebug/diff"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/shopspring/decimal"
+	ocrcommontypes "github.com/smartcontractkit/libocr/commontypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -173,10 +174,8 @@ func TestConfig_Marshal(t *testing.T) {
 
 	global := Config{
 		Core: config.Core{
-			Dev:                 ptr(true),
 			ExplorerURL:         mustURL("http://explorer.url"),
 			InsecureFastScrypt:  ptr(true),
-			ReaperExpiration:    models.MustNewDuration(7 * 24 * time.Hour),
 			RootDir:             ptr("test/root/dir"),
 			ShutdownGracePeriod: models.MustNewDuration(10 * time.Second),
 		},
@@ -184,10 +183,9 @@ func TestConfig_Marshal(t *testing.T) {
 
 	full := global
 	full.Feature = &config.Feature{
-		FeedsManager:       ptr(true),
-		LogPoller:          ptr(true),
-		OffchainReporting2: ptr(true),
-		OffchainReporting:  ptr(true),
+		FeedsManager: ptr(true),
+		LogPoller:    ptr(true),
+		UICSA:        ptr(true),
 	}
 	full.Database = &config.Database{
 		DefaultIdleInTxSessionTimeout: models.MustNewDuration(time.Minute),
@@ -203,11 +201,8 @@ func TestConfig_Marshal(t *testing.T) {
 			FallbackPollInterval: models.MustNewDuration(2 * time.Minute),
 		},
 		Lock: &config.DatabaseLock{
-			Mode:                  ptr("advisory"),
-			AdvisoryCheckInterval: models.MustNewDuration(5 * time.Minute),
-			AdvisoryID:            ptr[int64](345982730592843),
-			LeaseDuration:         &minute,
-			LeaseRefreshInterval:  &second,
+			LeaseDuration:        &minute,
+			LeaseRefreshInterval: &second,
 		},
 		Backup: &config.DatabaseBackup{
 			Dir:              ptr("test/backup/dir"),
@@ -238,12 +233,13 @@ func TestConfig_Marshal(t *testing.T) {
 		UnixTS:          ptr(true),
 	}
 	full.WebServer = &config.WebServer{
-		AllowOrigins:      ptr("*"),
-		BridgeResponseURL: mustURL("https://bridge.response"),
-		HTTPWriteTimeout:  models.MustNewDuration(time.Minute),
-		HTTPPort:          ptr[uint16](56),
-		SecureCookies:     ptr(true),
-		SessionTimeout:    models.MustNewDuration(time.Hour),
+		AllowOrigins:            ptr("*"),
+		BridgeResponseURL:       mustURL("https://bridge.response"),
+		HTTPWriteTimeout:        models.MustNewDuration(time.Minute),
+		HTTPPort:                ptr[uint16](56),
+		SecureCookies:           ptr(true),
+		SessionTimeout:          models.MustNewDuration(time.Hour),
+		SessionReaperExpiration: models.MustNewDuration(7 * 24 * time.Hour),
 		MFA: &config.WebServerMFA{
 			RPID:     ptr("test-rpid"),
 			RPOrigin: ptr("test-rp-origin"),
@@ -276,6 +272,7 @@ func TestConfig_Marshal(t *testing.T) {
 		SimulateTransactions:         ptr(true),
 	}
 	full.OCR2 = &config.OCR2{
+		Enabled:                            ptr(true),
 		ContractConfirmations:              ptr[uint32](11),
 		BlockchainTimeout:                  models.MustNewDuration(3 * time.Second),
 		ContractPollInterval:               models.MustNewDuration(time.Hour),
@@ -285,6 +282,7 @@ func TestConfig_Marshal(t *testing.T) {
 		KeyBundleID:                        ptr(models.MustSha256HashFromHex("7a5f66bbe6594259325bf2b4f5b1a9c9")),
 	}
 	full.OCR = &config.OCR{
+		Enabled:                      ptr(true),
 		ObservationTimeout:           models.MustNewDuration(11 * time.Second),
 		BlockchainTimeout:            models.MustNewDuration(3 * time.Second),
 		ContractPollInterval:         models.MustNewDuration(time.Hour),
@@ -312,11 +310,14 @@ func TestConfig_Marshal(t *testing.T) {
 			PeerstoreWriteInterval:           models.MustNewDuration(time.Minute),
 		},
 		V2: &config.P2PV2{
-			AnnounceAddresses:    &[]string{"a", "b", "c"},
-			DefaultBootstrappers: &[]string{"1", "2", "3"},
-			DeltaDial:            models.MustNewDuration(time.Minute),
-			DeltaReconcile:       models.MustNewDuration(time.Second),
-			ListenAddresses:      &[]string{"foo", "bar"},
+			AnnounceAddresses: &[]string{"a", "b", "c"},
+			DefaultBootstrappers: &[]ocrcommontypes.BootstrapperLocator{
+				{PeerID: "12D3KooWMoejJznyDuEk5aX6GvbjaG12UzeornPCBNzMRqdwrFJw", Addrs: []string{"foo:42", "bar:10"}},
+				{PeerID: "12D3KooWMoejJznyDuEk5aX6GvbjaG12UzeornPCBNzMRqdwrFJw", Addrs: []string{"test:99"}},
+			},
+			DeltaDial:       models.MustNewDuration(time.Minute),
+			DeltaReconcile:  models.MustNewDuration(time.Second),
+			ListenAddresses: &[]string{"foo", "bar"},
 		},
 	}
 	full.Keeper = &config.Keeper{
@@ -513,10 +514,8 @@ func TestConfig_Marshal(t *testing.T) {
 		exp    string
 	}{
 		{"empty", Config{}, ``},
-		{"global", global, `Dev = true
-ExplorerURL = 'http://explorer.url'
+		{"global", global, `ExplorerURL = 'http://explorer.url'
 InsecureFastScrypt = true
-ReaperExpiration = '168h0m0s'
 RootDir = 'test/root/dir'
 ShutdownGracePeriod = '10s'
 `},
@@ -524,8 +523,7 @@ ShutdownGracePeriod = '10s'
 [Feature]
 FeedsManager = true
 LogPoller = true
-OffchainReporting2 = true
-OffchainReporting = true
+UICSA = true
 `},
 		{"Database", Config{Core: config.Core{Database: full.Database}}, `
 [Database]
@@ -549,9 +547,6 @@ MinReconnectInterval = '5m0s'
 FallbackPollInterval = '2m0s'
 
 [Database.Lock]
-Mode = 'advisory'
-AdvisoryCheckInterval = '5m0s'
-AdvisoryID = 345982730592843
 LeaseDuration = '1m0s'
 LeaseRefreshInterval = '1s'
 `},
@@ -585,6 +580,7 @@ HTTPWriteTimeout = '1m0s'
 HTTPPort = 56
 SecureCookies = true
 SessionTimeout = '1h0m0s'
+SessionReaperExpiration = '168h0m0s'
 
 [WebServer.MFA]
 RPID = 'test-rpid'
@@ -620,6 +616,7 @@ ResultWriteQueueDepth = 10
 `},
 		{"OCR", Config{Core: config.Core{OCR: full.OCR}}, `
 [OCR]
+Enabled = true
 ObservationTimeout = '11s'
 BlockchainTimeout = '3s'
 ContractPollInterval = '1h0m0s'
@@ -631,6 +628,7 @@ TransmitterAddress = '0xa0788FC17B1dEe36f057c42B6F373A34B014687e'
 `},
 		{"OCR2", Config{Core: config.Core{OCR2: full.OCR2}}, `
 [OCR2]
+Enabled = true
 ContractConfirmations = 11
 BlockchainTimeout = '3s'
 ContractPollInterval = '1h0m0s'
@@ -660,7 +658,7 @@ PeerstoreWriteInterval = '1m0s'
 
 [P2P.V2]
 AnnounceAddresses = ['a', 'b', 'c']
-DefaultBootstrappers = ['1', '2', '3']
+DefaultBootstrappers = ['12D3KooWMoejJznyDuEk5aX6GvbjaG12UzeornPCBNzMRqdwrFJw@foo:42/bar:10', '12D3KooWMoejJznyDuEk5aX6GvbjaG12UzeornPCBNzMRqdwrFJw@test:99']
 DeltaDial = '1m0s'
 DeltaReconcile = '1s'
 ListenAddresses = ['foo', 'bar']

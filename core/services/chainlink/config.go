@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/multierr"
 
 	solcfg "github.com/smartcontractkit/chainlink-solana/pkg/solana/config"
 	soldb "github.com/smartcontractkit/chainlink-solana/pkg/solana/db"
@@ -14,11 +15,15 @@ import (
 	evmtyp "github.com/smartcontractkit/chainlink/core/chains/evm/types"
 	"github.com/smartcontractkit/chainlink/core/chains/solana"
 	tertyp "github.com/smartcontractkit/chainlink/core/chains/terra/types"
+	coreconfig "github.com/smartcontractkit/chainlink/core/config"
 	config "github.com/smartcontractkit/chainlink/core/config/v2"
+	"github.com/smartcontractkit/chainlink/core/logger"
 	"github.com/smartcontractkit/chainlink/core/utils"
 )
 
 // Config is the root type used for TOML configuration.
+//
+// See docs at /docs/CONFIG.md generated via config.GenerateDocs from /internal/config/docs.toml
 //
 // When adding a new field:
 // 	- consider including a unit suffix with the field name
@@ -36,6 +41,31 @@ type Config struct {
 	Terra []TerraConfig `toml:",omitempty"`
 }
 
+func NewConfig(tomlString string, lggr logger.Logger) (coreconfig.GeneralConfig, error) {
+	lggr = lggr.Named("Config")
+	var c Config
+	err := toml.Unmarshal([]byte(tomlString), &c)
+	if err != nil {
+		return nil, err
+	}
+	input, err := c.TOMLString()
+	if err != nil {
+		return nil, err
+	}
+	//TODO drop if diff is good enough
+	lggr.Info("Input Configuration", "config", input)
+
+	//TODO c.SetDefaults()
+
+	effective, err := c.TOMLString()
+	if err != nil {
+		return nil, err
+	}
+	//TODO can we comment the defaults somehow? or maybe use diff.Diff ?
+	lggr.Info("Effective Configuration, with defaults applied", "config", effective)
+	return &legacyGeneralConfig{c: &c, lggr: lggr}, nil
+}
+
 // TOMLString returns a pretty-printed TOML encoded string, with extra line breaks removed.
 func (c *Config) TOMLString() (string, error) {
 	b, err := toml.Marshal(c)
@@ -50,11 +80,30 @@ func (c *Config) TOMLString() (string, error) {
 	return s, nil
 }
 
+func (c *Config) Validate() (err error) {
+	err = c.Core.Validate()
+	for _, c := range c.EVM {
+		err = multierr.Combine(err, c.Validate())
+	}
+	for _, c := range c.Solana {
+		err = multierr.Combine(err, c.Validate())
+	}
+	for _, c := range c.Terra {
+		err = multierr.Combine(err, c.Validate())
+	}
+	return
+}
+
 type EVMConfig struct {
 	ChainID *utils.Big
 	Enabled *bool
 	evmcfg.Chain
 	Nodes []evmcfg.Node
+}
+
+func (c *EVMConfig) Validate() error {
+	//TODO
+	return nil
 }
 
 func (c *EVMConfig) setFromDB(ch evmtyp.DBChain, nodes []evmtyp.Node) error {
@@ -81,6 +130,11 @@ type SolanaConfig struct {
 	Nodes []solcfg.Node
 }
 
+func (c *SolanaConfig) Validate() error {
+	//TODO
+	return nil
+}
+
 func (c *SolanaConfig) setFromDB(ch solana.DBChain, nodes []soldb.Node) error {
 	c.ChainID = ch.ID
 	c.Enabled = &ch.Enabled
@@ -103,6 +157,11 @@ type TerraConfig struct {
 	Enabled *bool
 	tercfg.Chain
 	Nodes []tercfg.Node
+}
+
+func (c *TerraConfig) Validate() error {
+	//TODO
+	return nil
 }
 
 func (c *TerraConfig) setFromDB(ch tertyp.DBChain, nodes []terdb.Node) error {
