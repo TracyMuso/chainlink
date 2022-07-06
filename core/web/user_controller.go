@@ -204,7 +204,7 @@ func (c *UserController) Delete(ctx *gin.Context) {
 	}
 
 	if err = c.App.SessionORM().DeleteUser(email); err != nil {
-		c.App.GetLogger().Errorf("Error deleting API user", "err", err, "email", email)
+		c.App.GetLogger().Errorf("Error deleting API user", "err", err)
 		jsonAPIError(ctx, http.StatusInternalServerError, pkgerrors.Errorf("error deleting API user"))
 		return
 	}
