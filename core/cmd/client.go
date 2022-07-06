@@ -729,7 +729,7 @@ func (f fileAPIInitializer) Initialize(orm sessions.ORM) (sessions.User, error) 
 	if len(dbUsers) == 0 {
 		user, err := sessions.NewUser(request.Email, request.Password, sessions.UserRoleAdmin)
 		if err != nil {
-			return user, err
+			return user, errors.Wrap(err, "failed to instantiate new user")
 		}
 		return user, orm.CreateUser(&user)
 	}
