@@ -1,7 +1,7 @@
 -- +goose Up
 
 -- Create new user roles enum for users table
-CREATE TYPE user_roles AS ENUM ('admin', 'edit', 'edit_minimal', 'view');
+CREATE TYPE user_roles AS ENUM ('admin', 'edit', 'run', 'view');
 
 -- Add new role column to users table, type enum
 ALTER TABLE users ADD role user_roles NOT NULL DEFAULT 'view';

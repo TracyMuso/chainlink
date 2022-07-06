@@ -132,9 +132,9 @@ func AuthenticateExternalInitiator(c *gin.Context, store Authenticator) error {
 	c.Set(SessionExternalInitiatorKey, ei)
 
 	// External initiator endpoints (wrapped with AuthenticateExternalInitiator) inherently asume the role
-	// of edit_minimal (required to trigger job runs)
+	// of 'run' (required to trigger job runs)
 	c.Set(SessionExternalInitiatorKey, ei)
-	c.Set(SessionUserKey, &clsessions.User{Role: clsessions.UserRoleEditMinimal})
+	c.Set(SessionUserKey, &clsessions.User{Role: clsessions.UserRoleRun})
 
 	return nil
 }
@@ -187,7 +187,7 @@ func GetAuthenticatedExternalInitiator(c *gin.Context) (*bridges.ExternalInitiat
 }
 
 // RequiresEditMinimalRole extracts the user object from the context, and asserts the the user's role is at least
-// 'edit_minimal'
+// 'run'
 func RequiresEditMinimalRole(handler func(*gin.Context)) func(*gin.Context) {
 	return func(c *gin.Context) {
 		user, ok := GetAuthenticatedUser(c)
@@ -215,7 +215,7 @@ func RequiresEditRole(handler func(*gin.Context)) func(*gin.Context) {
 			jsonAPIError(c, http.StatusUnauthorized, errors.Errorf("not a valid session"))
 			return
 		}
-		if user.Role == clsessions.UserRoleView || user.Role == clsessions.UserRoleEditMinimal {
+		if user.Role == clsessions.UserRoleView || user.Role == clsessions.UserRoleRun {
 			c.Abort()
 			jsonAPIError(c, http.StatusUnauthorized, errors.Errorf("Unauthorized"))
 			return
