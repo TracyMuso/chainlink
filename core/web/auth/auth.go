@@ -186,9 +186,9 @@ func GetAuthenticatedExternalInitiator(c *gin.Context) (*bridges.ExternalInitiat
 	return obj.(*bridges.ExternalInitiator), ok
 }
 
-// RequiresEditMinimalRole extracts the user object from the context, and asserts the the user's role is at least
+// RequiresRunRole extracts the user object from the context, and asserts the the user's role is at least
 // 'run'
-func RequiresEditMinimalRole(handler func(*gin.Context)) func(*gin.Context) {
+func RequiresRunRole(handler func(*gin.Context)) func(*gin.Context) {
 	return func(c *gin.Context) {
 		user, ok := GetAuthenticatedUser(c)
 		if !ok {

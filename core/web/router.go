@@ -280,7 +280,7 @@ func v2Routes(app chainlink.Application, r *gin.RouterGroup) {
 		authv2.GET("/transactions/:TxHash", txs.Show)
 
 		rc := ReplayController{app}
-		authv2.POST("/replay_from_block/:number", auth.RequiresEditMinimalRole(rc.ReplayFromBlock))
+		authv2.POST("/replay_from_block/:number", auth.RequiresRunlRole(rc.ReplayFromBlock))
 
 		csakc := CSAKeysController{app}
 		authv2.GET("/keys/csa", csakc.Index)
@@ -419,7 +419,7 @@ func v2Routes(app chainlink.Application, r *gin.RouterGroup) {
 		auth.AuthenticateBySession,
 	))
 	userOrEI.GET("/ping", ping.Show)
-	userOrEI.POST("/jobs/:ID/runs", auth.RequiresEditMinimalRole(prc.Create))
+	userOrEI.POST("/jobs/:ID/runs", auth.RequiresRunRole(prc.Create))
 }
 
 // This is higher because it serves main.js and any static images. There are
