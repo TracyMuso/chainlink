@@ -131,7 +131,7 @@ func AuthenticateExternalInitiator(c *gin.Context, store Authenticator) error {
 
 	c.Set(SessionExternalInitiatorKey, ei)
 
-	// External initiator endpoints (wrapped with AuthenticateExternalInitiator) inherently asume the role
+	// External initiator endpoints (wrapped with AuthenticateExternalInitiator) inherently assume the role
 	// of 'run' (required to trigger job runs)
 	c.Set(SessionExternalInitiatorKey, ei)
 	c.Set(SessionUserKey, &clsessions.User{Role: clsessions.UserRoleRun})

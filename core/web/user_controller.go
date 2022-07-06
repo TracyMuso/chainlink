@@ -41,7 +41,7 @@ func (c *UserController) Index(ctx *gin.Context) {
 	jsonAPIResponse(ctx, presenters.NewUserResources(users), "users")
 }
 
-// Create creates a new API user with provided context arugments.
+// Create creates a new API user with provided context arguments.
 func (c *UserController) Create(ctx *gin.Context) {
 	type newUserRequest struct {
 		Email    string `json:"email"`
