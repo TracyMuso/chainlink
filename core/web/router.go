@@ -280,7 +280,7 @@ func v2Routes(app chainlink.Application, r *gin.RouterGroup) {
 		authv2.GET("/transactions/:TxHash", txs.Show)
 
 		rc := ReplayController{app}
-		authv2.POST("/replay_from_block/:number", auth.RequiresRunlRole(rc.ReplayFromBlock))
+		authv2.POST("/replay_from_block/:number", auth.RequiresRunRole(rc.ReplayFromBlock))
 
 		csakc := CSAKeysController{app}
 		authv2.GET("/keys/csa", csakc.Index)
